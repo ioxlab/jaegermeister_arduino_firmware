@@ -4,6 +4,8 @@
 #define d_ID                    ("CONTROL\n")
 #define d_OK                    ("OK\n")
 #define d_BAD_SYNTAX            ("BAD_SYNTAX\n")
+#define d_IS_FREE               ("Y\n")
+#define d_IS_NOT_FREE           ("N\n")
 #define d_UNRECOGNIZED_COMMAND  ("UNRECOGNIZED_COMMAND\n")
 
 #define d_INVALID_SWITCH_STATE  (-1)
@@ -11,17 +13,15 @@
 enum Command {
     ID,
     SET,
-    GET,
-    APPLY,
     SHOT,
+    FREE,
     UNRECOGNIZED
 };
 
 void cmd_id();
 void cmd_set();
-void cmd_get();
-void cmd_apply();
 void cmd_shot();
+void cmd_free();
 void cmd_unrecognized();
 
 // Parser defines
@@ -68,12 +68,10 @@ void loop() {
             cmd_id();
         case SET:
             cmd_set();
-        case GET:
-            cmd_get();
-        case APPLY:
-            cmd_apply();
         case SHOT:
             cmd_shot();
+        case FREE:
+            cmd_free();
         case UNRECOGNIZED:
             cmd_unrecognized();
     }
@@ -88,12 +86,10 @@ Command get_command() {
         return Command::ID;
     } else if (strncmp("SET", mca_StringBuffer, 3) == 0) {
         return Command::SET;
-    } else if (strncmp("GET", mca_StringBuffer, 3) == 0) {
-        return Command::GET;
-    } else if (strncmp("APPLY", mca_StringBuffer, 5) == 0) {
-        return Command::APPLY;
     } else if (strncmp("SHOT", mca_StringBuffer, 4) == 0) {
         return Command::SHOT;
+    } else if (strncmp("FREE", mca_StringBuffer, 4) == 0) {
+        return Command::FREE;
     } else {
         return Command::UNRECOGNIZED;
     }
@@ -124,19 +120,15 @@ void cmd_set() {
     }
 }
 
-void cmd_get() {
-    int l1, l2, l3, l4, l5, k, j;
-    // TODO: LED, Schlüsselschalter und Ausgabetaste Status abfragen
+void cmd_free() {
+    bool is_free = false;
+    // TODO: Abfragen ob die Ausgabe frei is (ob der shot entnommen wurde) und in is_free speichern
 
-    char response[34];
-    sprintf(response, "L1=%d;L2=%d;L3=%d;L4=%d;L5=%d;K=%d;J=%d\n", l1, l2, l3, l4, l5, k, j);
-    Serial.print(response);
-}
-
-void cmd_apply() {
-    // TODO: LED Status auf Relais umsetzen
-
-    Serial.print("OK\n");
+    if (is_free) {
+        Serial.print(d_IS_FREE);
+    } else {
+        Serial.print(d_IS_NOT_FREE);
+    }
 }
 
 void cmd_shot() {
