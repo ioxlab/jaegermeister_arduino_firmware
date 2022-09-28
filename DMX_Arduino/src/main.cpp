@@ -2,6 +2,21 @@
 
 // Project defines
 #define d_ID                    ("DMX\n")
+#define d_OK                    ("OK\n")
+#define d_BAD_SYNTAX            ("BAD_SYNTAX\n")
+#define d_UNRECOGNIZED_COMMAND  ("UNRECOGNIZED_COMMAND\n")
+
+enum Command {
+    ID,
+    TRIGGER,
+    UNRECOGNIZED
+};
+
+Command get_command();
+
+void cmd_id();
+void cmd_trigger();
+void cmd_unrecognized();
 
 // Parser defines
 #define d_MAX_STRING_SIZE       (64)
@@ -10,48 +25,69 @@
 // Communication defines
 #define d_BAUD_RATE             (115200)
 
-char mca_StringBuffer[d_MAX_STRING_SIZE] = {0};
-char mc_ReadedBytes = 0;
+char mca_StringBuffer[d_MAX_STRING_SIZE] = {0}; // Read bytes
+int mc_ReadBytes = 0; // Amount of read bytes
+int incomingByte = 0; // For incoming serial data
 
 void setup ()
 {
     Serial.begin (d_BAUD_RATE);
 }
 
-int incomingByte = 0; // For incoming serial data
-
 void loop ()
 {
-
     // Read until \n
-    while (true)
-        {
-            // Wait until bytes available
-            while (Serial.available () == 0);
-            // Read byte
-            incomingByte = Serial.read ();
+    while (true) {
+        // Wait until bytes available
+        while (Serial.available() == 0);
+        // Read byte
+        incomingByte = Serial.read();
 
-            // If it is a \n stop reading
-            if (incomingByte == '\n')
-                {
-                    break;
-                }
-            else
-                {
-                    // Otherwise, add char to buffer
-                    mca_StringBuffer[mc_ReadedBytes] = (char) incomingByte;
-                    mc_ReadedBytes += 1;
-                }
+        // If it is a \n stop reading
+        if (incomingByte == '\n') {
+            break;
+        } else {
+            // Otherwise, add char to buffer
+            mca_StringBuffer[mc_ReadBytes] = (char) incomingByte;
+            mc_ReadBytes += 1;
         }
+    }
 
-    if (!strcmp (mca_StringBuffer, "?"))
-        {
-            Serial.print (d_ID);
-        }
-    else
-        {
-            Serial.print ("UNRECOGNIZED COMMAND\n");
-        }
-    mc_ReadedBytes = 0;
-    memset (&mca_StringBuffer,0,d_MAX_STRING_SIZE);
+    // Handle command
+    switch (get_command()) {
+        case Command::ID:
+            cmd_id();
+        case Command::TRIGGER:
+            cmd_trigger();
+        case Command::UNRECOGNIZED:
+            cmd_unrecognized();
+    }
+
+    // Cleanup
+    mc_ReadBytes = 0;
+    memset(&mca_StringBuffer, 0, d_MAX_STRING_SIZE);
+}
+
+Command get_command() {
+    if (strncmp("?", mca_StringBuffer, 1) == 0) {
+        return Command::ID;
+    } else if (strncmp("TRIGGER", mca_StringBuffer, 7) == 0) {
+        return Command::TRIGGER;
+    } else {
+        return Command::UNRECOGNIZED;
+    }
+}
+
+void cmd_id() {
+    Serial.print(d_ID);
+}
+
+void cmd_trigger() {
+    // TODO: Feuerwerk auslösen
+    
+    Serial.print(d_OK);
+}
+
+void cmd_unrecognized() {
+    Serial.print(d_UNRECOGNIZED_COMMAND);
 }
