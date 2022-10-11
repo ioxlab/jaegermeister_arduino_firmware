@@ -10,6 +10,17 @@
 
 #define d_INVALID_SWITCH_STATE  (-1)
 
+
+
+// Relais
+#define PIN_RELAIS_FOG 37
+#define PIN_RELAIS_SPARK 35
+#define PIN_RELAIS_BUBBLE 33
+#define PIN_RELAIS_ENABLE_SHOT 31
+#define PIN_RELAIS_DOOR 29
+#define PIN_RELAIS_TRIGGER_SHOT 27
+#define PIN_RELAIS_NC 25
+
 enum Command {
     ID,
     SET,
@@ -35,6 +46,14 @@ char mca_StringBuffer[d_MAX_STRING_SIZE] = {0};
 int mc_ReadBytes = 0;
 
 void setup() {
+    pinMode(PIN_RELAIS_FOG, OUTPUT);
+    pinMode(PIN_RELAIS_SPARK, OUTPUT);
+    pinMode(PIN_RELAIS_BUBBLE, OUTPUT);
+    pinMode(PIN_RELAIS_ENABLE_SHOT, OUTPUT);
+    pinMode(PIN_RELAIS_DOOR, OUTPUT);
+    pinMode(PIN_RELAIS_TRIGGER_SHOT, OUTPUT);
+    pinMode(PIN_RELAIS_NC, OUTPUT);
+
     Serial.begin(d_BAUD_RATE);
 }
 
@@ -110,8 +129,23 @@ void cmd_set() {
     if (parse_set(switches)) {
         for (int i = 0; i < 5; i++) {
             if (switches[i] != d_INVALID_SWITCH_STATE) {
-                // TODO: switches[i] in LED status schreiben
-
+                switch (i) {
+                    case 0:
+                        digitalWrite(PIN_RELAIS_FOG, switches[i]);
+                        break;
+                    case 1:
+                        digitalWrite(PIN_RELAIS_SPARK, switches[i]);
+                        break;
+                    case 2:
+                        digitalWrite(PIN_RELAIS_BUBBLE, switches[i]);
+                        break;
+                    case 3:
+                        digitalWrite(PIN_RELAIS_ENABLE_SHOT, switches[i]);
+                        break;
+                    case 4:
+                        digitalWrite(PIN_RELAIS_DOOR, switches[i]);
+                        break;
+                }
             }
         }
         Serial.print(d_OK);
@@ -121,7 +155,7 @@ void cmd_set() {
 }
 
 void cmd_free() {
-    bool is_free = false;
+    bool is_free = true;
     // TODO: Abfragen ob die Ausgabe frei is (ob der shot entnommen wurde) und in is_free speichern
 
     if (is_free) {
@@ -132,8 +166,9 @@ void cmd_free() {
 }
 
 void cmd_shot() {
-    // TODO: Shot ausgeben
-
+    digitalWrite(PIN_RELAIS_TRIGGER_SHOT, HIGH);
+    delay(500);
+    digitalWrite(PIN_RELAIS_TRIGGER_SHOT, LOW);
     Serial.print(d_OK);
 }
 
