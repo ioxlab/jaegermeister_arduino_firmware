@@ -5,11 +5,12 @@
 #define d_OK                    ("OK\n")
 #define d_UNRECOGNIZED_COMMAND  ("UNRECOGNIZED_COMMAND\n")
 
+// Fog machine
+#define PIN_FOG 13
+
 enum Command {
     ID,
     TRIGGER,
-    OPEN,
-    CLOSE,
     UNRECOGNIZED
 };
 
@@ -17,8 +18,6 @@ Command get_command();
 
 void cmd_id();
 void cmd_trigger();
-void cmd_open();
-void cmd_close();
 void cmd_unrecognized();
 
 // Parser defines
@@ -33,6 +32,7 @@ int incomingByte = 0; // For incoming serial data
 
 void setup ()
 {
+    pinMode(PIN_FOG, OUTPUT);
     Serial.begin (d_BAUD_RATE);
 }
 
@@ -61,10 +61,6 @@ void loop ()
             cmd_id();
         case Command::TRIGGER:
             cmd_trigger();
-        case Command::OPEN:
-            cmd_open();
-        case Command::CLOSE:
-            cmd_close();
         case Command::UNRECOGNIZED:
             cmd_unrecognized();
     }
@@ -79,10 +75,6 @@ Command get_command() {
         return Command::ID;
     } else if (strncmp("TRIGGER", mca_StringBuffer, 7) == 0) {
         return Command::TRIGGER;
-    } else if (strncmp("OPEN", mca_StringBuffer, 4) == 0) {
-        return Command::OPEN;
-    } else if (strncmp("CLOSE", mca_StringBuffer, 5) == 0) {
-        return Command::CLOSE;
     } else {
         return Command::UNRECOGNIZED;
     }
@@ -93,18 +85,9 @@ void cmd_id() {
 }
 
 void cmd_trigger() {
-    // TODO: Nebel verteilen
-
-    Serial.print(d_OK);
-}
-void cmd_open() {
-    // TODO: Klappe oeffnen
-
-    Serial.print(d_OK);
-}
-void cmd_close() {
-    // TODO: Klappe schliessen
-
+    digitalWrite(PIN_FOG, HIGH);
+    delay(500);
+    digitalWrite(PIN_FOG, LOW);
     Serial.print(d_OK);
 }
 
