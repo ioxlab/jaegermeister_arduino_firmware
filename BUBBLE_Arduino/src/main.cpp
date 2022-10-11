@@ -15,8 +15,11 @@ enum Command {
 Command get_command();
 
 void cmd_id();
+
 void cmd_trigger();
+
 void cmd_off();
+
 void cmd_unrecognized();
 
 // Parser defines
@@ -29,13 +32,71 @@ char mca_StringBuffer[d_MAX_STRING_SIZE] = {0}; // Read bytes
 int mc_ReadBytes = 0; // Amount of read bytes
 int incomingByte = 0; // For incoming serial data
 
-void setup ()
-{
-    Serial.begin (d_BAUD_RATE);
+//Ultraschallsensor
+#define PIN_ECHO    6
+#define PIN_TRIGGER 7
+unsigned long duration;
+#define MIN_FILL_DISTANCE 2
+
+// Gleichstrommotor
+#define PIN_PWM     9
+#define PIN_IN1     10
+#define PIN_IN2     11
+#define MOTOR_SPEED 100 // in range 0 - 255
+
+// Seifenblasenmaschine
+#define PIN_BUBBLE_RELAIS 2
+
+
+void setup() {
+    pinMode(PIN_TRIGGER, OUTPUT);
+    pinMode(PIN_ECHO, INPUT);
+    pinMode(PIN_PWM, OUTPUT);
+    pinMode(PIN_IN1, OUTPUT);
+    pinMode(PIN_IN2, OUTPUT);
+    pinMode(PIN_BUBBLE_RELAIS, OUTPUT);
+
+    Serial.begin(d_BAUD_RATE);
 }
 
-void loop ()
-{
+void fill_tank() {
+    while (true) {
+        // Measure fill level
+        digitalWrite(PIN_TRIGGER, LOW);
+        delayMicroseconds(2);
+        digitalWrite(PIN_TRIGGER, HIGH);
+        delayMicroseconds(10);
+        duration = pulseIn(PIN_ECHO, HIGH);
+
+        // If the fill level is below the threshold
+        if (duration > (MIN_FILL_DISTANCE * 58)) {
+            // Turn pump on
+            analogWrite(PIN_PWM, MOTOR_SPEED);
+            digitalWrite(PIN_IN1, HIGH);
+            digitalWrite(PIN_IN2, LOW);
+        } else {
+            // Turn pump off and return
+            digitalWrite(PIN_IN1, LOW);
+            digitalWrite(PIN_IN2, LOW);
+            return;
+        }
+    }
+}
+
+void empty_tank() {
+    // Empty the tank
+    analogWrite(PIN_PWM, MOTOR_SPEED);
+    digitalWrite(PIN_IN1, LOW);
+    digitalWrite(PIN_IN2, HIGH);
+
+    delay(6000); // Warten bis ausgepump
+
+    // Pump off
+    digitalWrite(PIN_IN1, LOW);
+    digitalWrite(PIN_IN2, LOW);
+}
+
+void loop() {
     // Read until \n
     while (true) {
         // Wait until bytes available
@@ -87,14 +148,19 @@ void cmd_id() {
 }
 
 void cmd_trigger() {
-    // TODO: Seifenblasen produzieren
+    // Fill tank or top it off
+    fill_tank();
+
+    // Make bubbles
+    digitalWrite(PIN_BUBBLE_RELAIS, HIGH);
+    delay(10000);
+    digitalWrite(PIN_BUBBLE_RELAIS, LOW);
 
     Serial.print(d_OK);
 }
 
 void cmd_off() {
-    // TODO: Fluessigkeit abpumpen
-
+    empty_tank();
     Serial.print(d_OK);
 }
 
