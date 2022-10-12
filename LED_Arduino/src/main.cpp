@@ -1,4 +1,31 @@
 #include <Arduino.h>
+#include "FastLED.h"
+
+// LED configuration
+#define LED_TYPE   WS2812B
+#define COLOR_ORDER   GRB
+#define VOLTS          5
+#define MAX_MA          5000
+
+#define BRIGHTNESS 20
+#define NUM_STRIPS  5
+#define NUM_LEDS_0 300
+#define NUM_LEDS_1 1
+#define NUM_LEDS_2 1
+#define NUM_LEDS_3 1
+#define NUM_LEDS_4 1
+
+CRGBArray<NUM_LEDS_0> LEDs_0;
+CRGBArray<NUM_LEDS_1> LEDs_1;
+CRGBArray<NUM_LEDS_2> LEDs_2;
+CRGBArray<NUM_LEDS_3> LEDs_3;
+CRGBArray<NUM_LEDS_4> LEDs_4;
+
+#define PIN_STRIP_0 PIND2
+#define PIN_STRIP_1 PIND3
+#define PIN_STRIP_2 PIND4
+#define PIN_STRIP_3 PIND5
+#define PIN_STRIP_4 PIND6
 
 // Project defines
 #define d_ID                    ("LED\n")
@@ -9,36 +36,17 @@
 #define d_INVALID_LED_PATTERN   (-1)
 #define d_INVALID_LED_STRIP     (-1)
 
-enum Command {
-    ID,
-    SET,
-    PLAY,
-    UNRECOGNIZED
-};
+void process_data(char *data);
 
-Command get_command();
-
-void cmd_id();
-void cmd_set();
-void cmd_play();
-void cmd_unrecognized();
-
-bool parse_set();
+bool parse_set(char *data);
 
 // Parser defines
 #define d_MAX_STRING_SIZE       (64)
 #define d_COMMAND_DELIMITER     (":")
 #define d_ARGUMENT_DELIMITER    (";")
-#define d_INVALID_KEY           (0)
-#define d_KEY_STRIP_ID          ("S")
-#define d_KEY_PATTERN_ID        ("P")
-#define d_INVALID_VALUE         (-1)
 
 // Communication defines
 #define d_BAUD_RATE             (115200)
-
-char mca_StringBuffer[d_MAX_STRING_SIZE] = {0};
-int mc_ReadBytes = 0;
 
 enum Pattern {
     JAEGERMEISTER_ORANGE = 1,
@@ -52,135 +60,177 @@ enum Pattern {
     AUS = 9,
 };
 
-Pattern set_patterns[] = {
-        Pattern::JAEGERMEISTER_GRUEN,
-        Pattern::JAEGERMEISTER_ORANGE,
-        Pattern::JAEGERMEISTER_ORANGE,
-        Pattern::AUS,
-        Pattern::JAEGERMEISTER_ORANGE
+Pattern led_strip_patterns[NUM_STRIPS] = {
+        Pattern::REGENBOGEN_UMLAUFEND,
+        Pattern::REGENBOGEN_UMLAUFEND,
+        Pattern::REGENBOGEN_UMLAUFEND,
+        Pattern::REGENBOGEN_UMLAUFEND,
+        Pattern::REGENBOGEN_UMLAUFEND,
 };
 
+enum State {
+    CheckForRX,
+    RX,
+    Displaying,
+};
+
+State state = CheckForRX;
+
 void setup() {
+    delay(3000); //safety startup delay
+    FastLED.setMaxPowerInVoltsAndMilliamps(VOLTS, MAX_MA);
+
+    FastLED.addLeds<LED_TYPE, PIN_STRIP_0, COLOR_ORDER>(LEDs_0, NUM_LEDS_0).getAdjustment(TypicalLEDStrip);
+    FastLED.addLeds<LED_TYPE, PIN_STRIP_1, COLOR_ORDER>(LEDs_1, NUM_LEDS_1).getAdjustment(TypicalLEDStrip);
+    FastLED.addLeds<LED_TYPE, PIN_STRIP_2, COLOR_ORDER>(LEDs_2, NUM_LEDS_2).getAdjustment(TypicalLEDStrip);
+    FastLED.addLeds<LED_TYPE, PIN_STRIP_3, COLOR_ORDER>(LEDs_3, NUM_LEDS_3).getAdjustment(TypicalLEDStrip);
+    FastLED.addLeds<LED_TYPE, PIN_STRIP_4, COLOR_ORDER>(LEDs_4, NUM_LEDS_4).getAdjustment(TypicalLEDStrip);
+
+    FastLED.setBrightness(BRIGHTNESS);
+    FastLED.clear();
+    FastLED.show();
     Serial.begin(d_BAUD_RATE);
 }
 
-int incomingByte = 0; // For incoming serial data
+void fill_strip_solid(int strip_id, CRGB color);
+
+void fill_strip_rainbow(int strip_id);
+
+int rainbow_offset = 0;
+#define RAINBOW_STEP 10
+
+bool processIncomingByte(const byte inByte) {
+    static char input_line[d_MAX_STRING_SIZE];
+    static unsigned int input_pos = 0;
+
+//    Serial.print((char) inByte);
+    switch (inByte) {
+        case '\n':   // end of text
+            input_line[input_pos] = 0;  // terminating null byte
+
+            // terminator reached! process input_line here ...
+//            Serial.print(input_line);
+            process_data(input_line);
+
+            // reset buffer for next time
+            input_pos = 0;
+
+            return true;
+
+        case '\r':   // discard carriage return
+            break;
+
+        default:
+            // keep adding if not full ... allow for terminating null byte
+            if (input_pos < (d_MAX_STRING_SIZE - 1))
+                input_line[input_pos++] = inByte;
+            break;
+
+    }  // end of switch
+    return false;
+
+} // end of processIncomingByte
+
+
+bool strobo_state = true;
+
+int check_rx_count = 0;
 
 void loop() {
-    // Read until \n
-    while (true) {
-        // Wait until bytes available
-        while (Serial.available() == 0);
-        // Read byte
-        incomingByte = Serial.read();
-
-        // If it is a \n stop reading
-        if (incomingByte == '\n') {
+    switch (state) {
+        case CheckForRX:
+            delay(20);
+            if (Serial.available() > 0)
+                state = RX;
+            else
+                state = Displaying;
             break;
-        } else {
-            // Otherwise, add char to buffer
-            mca_StringBuffer[mc_ReadBytes] = (char) incomingByte;
-            mc_ReadBytes += 1;
-        }
-    }
-
-    // Handle command
-    switch (get_command()) {
-        case ID:
-            cmd_id();
-        case SET:
-            cmd_set();
-        case PLAY:
-            cmd_play();
-        case UNRECOGNIZED:
-            cmd_unrecognized();
-    }
-
-    // Cleanup
-    mc_ReadBytes = 0;
-    memset(&mca_StringBuffer, 0, d_MAX_STRING_SIZE);
-}
-
-Command get_command() {
-    if (strncmp("?", mca_StringBuffer, 1) == 0) {
-        return Command::ID;
-    } else if (strncmp("SET", mca_StringBuffer, 3) == 0) {
-        return Command::SET;
-    } else if (strncmp("PLAY", mca_StringBuffer, 4) == 0) {
-        return Command::PLAY;
-    } else {
-        return Command::UNRECOGNIZED;
-    }
-}
-
-void cmd_id() {
-    Serial.print(d_ID);
-}
-
-void cmd_set() {
-    if (parse_set()) {
-        Serial.print(d_OK);
-    } else {
-        Serial.print(d_BAD_SYNTAX);
-    }
-}
-
-void cmd_play() {
-    for (int strip_id = 0; strip_id < 5; strip_id++) {
-        // TODO: LED pattern auf LED anzeigen
-        switch (set_patterns[strip_id]) {
-            case JAEGERMEISTER_ORANGE:
-                break;
-            case JAEGERMEISTER_GRUEN:
-                break;
-            case BLAU:
-                break;
-            case WEISS:
-                break;
-            case ROT:
-                break;
-            case REGENBOGEN_UMLAUFEND:
-                break;
-            case REGENBOGEN_FLACKERND:
-                break;
-            case STROBOSKOP:
-                break;
-            case AUS:
-                break;
-        }
-    }
-    Serial.print(d_OK);
-}
-
-void cmd_unrecognized() {
-    Serial.print(d_UNRECOGNIZED_COMMAND);
-}
-
-/// Parses a SET command and saves the switch states in switches.
-/// \param switches - Should be an int[5], initialized with -1;
-/// \return True, when no parsing errors.
-bool parse_set() {
-    int strip_id;
-    Pattern pattern;
-
-    char key[1] = { d_INVALID_KEY };
-    int value;
-    strtok(mca_StringBuffer, d_COMMAND_DELIMITER); // Skip command part
-    char* argument = strtok(nullptr, d_ARGUMENT_DELIMITER); // Get next argument
-    while (argument != nullptr) {
-        key[0] = d_INVALID_KEY;
-        value = d_INVALID_VALUE;
-
-        sscanf(argument, "%[A-Z]=%d", key, &value); // Parse argument
-        if (strncmp(key, d_KEY_STRIP_ID, 1) == 0) {
-            if ((1 <= strip_id) && (strip_id <= 5)) {
-                strip_id = value;
-            } else {
-                return false;
+        case RX:
+            while (Serial.available() > 0) {
+                if (processIncomingByte(Serial.read())) {
+                    delay(100);
+                    state = CheckForRX;
+                    break;
+                }
             }
-        } else if (strncmp(key, d_KEY_PATTERN_ID, 1) == 0) {
-            if ((1 <= value) && (value <= 9)) {
-                pattern = (Pattern)value;
+            break;
+        case Displaying:
+            rainbow_offset = (rainbow_offset + RAINBOW_STEP) % 256;
+            for (int i = 0; i < NUM_STRIPS; i++) {
+                switch (led_strip_patterns[i]) {
+                    case JAEGERMEISTER_ORANGE:
+                        fill_strip_solid(i, CRGB::Orange);
+                        break;
+                    case JAEGERMEISTER_GRUEN:
+                        fill_strip_solid(i, CRGB::Green);
+                        break;
+                    case BLAU:
+                        fill_strip_solid(i, CRGB::Blue);
+                        break;
+                    case WEISS:
+                        fill_strip_solid(i, CRGB::White);
+                        break;
+                    case ROT:
+                        fill_strip_solid(i, CRGB::Red);
+                        break;
+                    case REGENBOGEN_UMLAUFEND:
+                        fill_strip_rainbow(i);
+                        break;
+                    case REGENBOGEN_FLACKERND:
+                        if (strobo_state) {
+                            fill_strip_rainbow(i);
+                        } else {
+                            fill_strip_solid(i, CRGB::Black);
+                        }
+                        break;
+                    case STROBOSKOP:
+                        if (strobo_state) {
+
+                            fill_strip_solid(i, CRGB::White);
+                        } else {
+
+                            fill_strip_solid(i, CRGB::Black);
+                        }
+                        break;
+                    case AUS:
+                        fill_strip_solid(i, CRGB::Black);
+                        break;
+                }
+            }
+            strobo_state = !strobo_state;
+            FastLED.show();
+            state = CheckForRX;
+            break;
+    }
+}
+
+void process_data(char *data) {
+    if (strncmp("?", data, 1) == 0) {
+        Serial.print(d_ID);
+    } else if (strncmp("SET", data, 3) == 0) {
+        if (parse_set(data)) {
+            Serial.print(d_OK);
+        } else {
+            Serial.print(d_BAD_SYNTAX);
+        }
+    } else {
+        Serial.print(d_UNRECOGNIZED_COMMAND);
+    }
+}
+
+bool parse_set(char *data) {
+    int strip_id;
+    int pattern;
+    strtok(data, d_COMMAND_DELIMITER); // Skip command part
+    char *argument = strtok(nullptr, d_ARGUMENT_DELIMITER); // Get next argument
+    while (argument != nullptr) {
+        strip_id = d_INVALID_LED_STRIP;
+        pattern = d_INVALID_LED_PATTERN;
+
+        sscanf(argument, "S%d=%d", &strip_id, &pattern); // Parse argument
+        if ((strip_id != d_INVALID_LED_STRIP) && (strip_id <= 5)) {
+            if ((pattern != d_INVALID_LED_PATTERN) && (pattern <= 9)) {
+                led_strip_patterns[strip_id - 1] = (Pattern) pattern;
             } else {
                 return false;
             }
@@ -191,10 +241,46 @@ bool parse_set() {
         argument = strtok(nullptr, d_ARGUMENT_DELIMITER); // Get next argument
     }
 
-    if (strip_id != d_INVALID_LED_STRIP) {
-        set_patterns[strip_id - 1] = pattern;
-        return true;
-    } else {
-        return false;
+    return true;
+}
+
+void fill_strip_solid(int strip_id, CRGB color) {
+    switch (strip_id) {
+        case 0:
+            LEDs_0.fill_solid(color);
+            break;
+        case 1:
+            LEDs_1.fill_solid(color);
+            break;
+        case 2:
+            LEDs_2.fill_solid(color);
+            break;
+        case 3:
+            LEDs_3.fill_solid(color);
+            break;
+        case 4:
+            LEDs_4.fill_solid(color);
+            break;
+    }
+}
+
+void fill_strip_rainbow(int strip_id) {
+    switch (strip_id) {
+        case 0:
+            LEDs_0.fill_rainbow(rainbow_offset);
+            break;
+        case 1:
+            LEDs_1.fill_rainbow(rainbow_offset);
+            break;
+        case 2:
+            LEDs_2.fill_rainbow(rainbow_offset);
+            break;
+        case 3:
+            LEDs_3.fill_rainbow(rainbow_offset);
+            break;
+        case 4:
+            LEDs_4.fill_rainbow(rainbow_offset);
+            break;
+
     }
 }
