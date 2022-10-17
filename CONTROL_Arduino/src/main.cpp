@@ -53,7 +53,7 @@ bool parse_set(char *data);
 void process_data (char * data)
 {
     if (strncmp("?", data, 1) == 0) {
-        Serial.print(d_OK);
+        Serial.print(d_ID);
     } else if (strncmp("SET", data, 3) == 0) {
         if (parse_set(data)) {
             Serial.print(d_OK);
