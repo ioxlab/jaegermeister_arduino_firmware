@@ -7,25 +7,22 @@
 #define VOLTS          5
 #define MAX_MA          5000
 
-#define BRIGHTNESS 20
-#define NUM_STRIPS  5
-#define NUM_LEDS_0 300
-#define NUM_LEDS_1 1
-#define NUM_LEDS_2 1
-#define NUM_LEDS_3 1
-#define NUM_LEDS_4 1
+#define BRIGHTNESS 1
+#define NUM_STRIPS 4
+#define NUM_LEDS_0 60 // Jaegermeister Logo
+#define NUM_LEDS_1 62 // Fenster
+#define NUM_LEDS_2 17 // Shot Schriftzug
+#define NUM_LEDS_3 32 // Ausgabe
 
 CRGBArray<NUM_LEDS_0> LEDs_0;
 CRGBArray<NUM_LEDS_1> LEDs_1;
 CRGBArray<NUM_LEDS_2> LEDs_2;
 CRGBArray<NUM_LEDS_3> LEDs_3;
-CRGBArray<NUM_LEDS_4> LEDs_4;
 
 #define PIN_STRIP_0 PIND2
 #define PIN_STRIP_1 PIND3
 #define PIN_STRIP_2 PIND4
 #define PIN_STRIP_3 PIND5
-#define PIN_STRIP_4 PIND6
 
 // Project defines
 #define d_ID                    ("LED\n")
@@ -65,7 +62,6 @@ Pattern led_strip_patterns[NUM_STRIPS] = {
         Pattern::REGENBOGEN_UMLAUFEND,
         Pattern::REGENBOGEN_UMLAUFEND,
         Pattern::REGENBOGEN_UMLAUFEND,
-        Pattern::REGENBOGEN_UMLAUFEND,
 };
 
 enum State {
@@ -84,7 +80,6 @@ void setup() {
     FastLED.addLeds<LED_TYPE, PIN_STRIP_1, COLOR_ORDER>(LEDs_1, NUM_LEDS_1).getAdjustment(TypicalLEDStrip);
     FastLED.addLeds<LED_TYPE, PIN_STRIP_2, COLOR_ORDER>(LEDs_2, NUM_LEDS_2).getAdjustment(TypicalLEDStrip);
     FastLED.addLeds<LED_TYPE, PIN_STRIP_3, COLOR_ORDER>(LEDs_3, NUM_LEDS_3).getAdjustment(TypicalLEDStrip);
-    FastLED.addLeds<LED_TYPE, PIN_STRIP_4, COLOR_ORDER>(LEDs_4, NUM_LEDS_4).getAdjustment(TypicalLEDStrip);
 
     FastLED.setBrightness(BRIGHTNESS);
     FastLED.clear();
@@ -228,7 +223,7 @@ bool parse_set(char *data) {
         pattern = d_INVALID_LED_PATTERN;
 
         sscanf(argument, "S%d=%d", &strip_id, &pattern); // Parse argument
-        if ((strip_id != d_INVALID_LED_STRIP) && (strip_id <= 5)) {
+        if ((strip_id != d_INVALID_LED_STRIP) && (strip_id <= NUM_STRIPS)) {
             if ((pattern != d_INVALID_LED_PATTERN) && (pattern <= 9)) {
                 led_strip_patterns[strip_id - 1] = (Pattern) pattern;
             } else {
@@ -258,9 +253,6 @@ void fill_strip_solid(int strip_id, CRGB color) {
         case 3:
             LEDs_3.fill_solid(color);
             break;
-        case 4:
-            LEDs_4.fill_solid(color);
-            break;
     }
 }
 
@@ -278,9 +270,5 @@ void fill_strip_rainbow(int strip_id) {
         case 3:
             LEDs_3.fill_rainbow(rainbow_offset);
             break;
-        case 4:
-            LEDs_4.fill_rainbow(rainbow_offset);
-            break;
-
     }
 }
