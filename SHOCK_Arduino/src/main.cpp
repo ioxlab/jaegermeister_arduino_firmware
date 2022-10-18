@@ -5,15 +5,8 @@
 #define d_OK                    ("OK\n")
 #define d_BAD_SYNTAX            ("BAD_SYNTAX\n")
 #define d_UNRECOGNIZED_COMMAND  ("UNRECOGNIZED_COMMAND\n")
-
-enum Command {
-    ID,
-    SET,
-    PLAY,
-    UNRECOGNIZED
-};
-
-Command get_command();
+#define d_COMMAND_DELIMITER     (":")
+#define d_ARGUMENT_DELIMITER    (";")
 
 enum ShockPad {
     DONT_SHOCK = 0,
@@ -96,8 +89,8 @@ bool parse_set(char *data) {
     Level _shock_level = InvalidLevel;
     ShockPad _shock_pads[4] = { DONT_SHOCK, DONT_SHOCK, DONT_SHOCK, DONT_SHOCK };
 
-    strtok(data, ":"); // Skip command part
-    char* argument = strtok(nullptr, ";"); // Get next argument
+    strtok(data, d_COMMAND_DELIMITER); // Skip command part
+    char* argument = strtok(nullptr, d_ARGUMENT_DELIMITER); // Get next argument
     while (argument != nullptr) {
         _shock_level = InvalidLevel;
 
@@ -108,17 +101,17 @@ bool parse_set(char *data) {
             _shock_level = (Level)num_level;
         } else if (strncmp(argument, "P1", 2) == 0) {
             _shock_pads[0] = SHOCK;
-        } else if (strncmp(argument, "P1", 2) == 0) {
+        } else if (strncmp(argument, "P2", 2) == 0) {
             _shock_pads[1] = SHOCK;
-        } else if (strncmp(argument, "P1", 2) == 0) {
+        } else if (strncmp(argument, "P3", 2) == 0) {
             _shock_pads[2] = SHOCK;
-        } else if (strncmp(argument, "P1", 2) == 0) {
+        } else if (strncmp(argument, "P4", 2) == 0) {
             _shock_pads[3] = SHOCK;
         } else {
             return false;
         }
 
-        argument = strtok(nullptr, ";"); // Get next argument
+        argument = strtok(nullptr, d_ARGUMENT_DELIMITER); // Get next argument
     }
 
     if (_shock_level == InvalidLevel) return false;
