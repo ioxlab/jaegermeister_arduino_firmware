@@ -15,13 +15,13 @@
 #define PIN_ECHO    6
 #define PIN_TRIGGER 7
 unsigned long duration;
-#define MIN_FILL_DISTANCE 2
+#define MIN_FILL_DISTANCE 6
 
 // Gleichstrommotor
 #define PIN_PWM     9
 #define PIN_IN1     10
 #define PIN_IN2     11
-#define MOTOR_SPEED 100 // in range 0 - 255
+#define MOTOR_SPEED 255 // in range 0 - 255
 
 // Seifenblasenmaschine
 #define PIN_BUBBLE_RELAIS 2
@@ -41,18 +41,26 @@ void setup() {
 void fill_tank() {
     while (true) {
         // Measure fill level
-        digitalWrite(PIN_TRIGGER, LOW);
-        delayMicroseconds(2);
-        digitalWrite(PIN_TRIGGER, HIGH);
-        delayMicroseconds(10);
-        duration = pulseIn(PIN_ECHO, HIGH);
-
+        while (true) {
+            delay(50);
+            digitalWrite(PIN_TRIGGER, LOW);
+            delayMicroseconds(2);
+            digitalWrite(PIN_TRIGGER, HIGH);
+            delayMicroseconds(10);
+            duration = pulseIn(PIN_ECHO, HIGH);
+            if (duration != 0)
+                break;
+        }
+        Serial.print("Duration = ");
+        Serial.print(duration);
+        Serial.print("\n");
         // If the fill level is below the threshold
         if (duration > (MIN_FILL_DISTANCE * 58)) {
             // Turn pump on
             analogWrite(PIN_PWM, MOTOR_SPEED);
             digitalWrite(PIN_IN1, HIGH);
             digitalWrite(PIN_IN2, LOW);
+            delay(100);
         } else {
             // Turn pump off and return
             digitalWrite(PIN_IN1, LOW);
@@ -68,7 +76,7 @@ void empty_tank() {
     digitalWrite(PIN_IN1, LOW);
     digitalWrite(PIN_IN2, HIGH);
 
-    delay(6000);
+    delay(600000);
 
     // Pump off
     digitalWrite(PIN_IN1, LOW);
@@ -122,4 +130,3 @@ void processIncomingByte (const byte inByte)
 void loop() {
     while (Serial.available () > 0)
         processIncomingByte(Serial.read ());
-}

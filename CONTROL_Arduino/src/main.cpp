@@ -122,4 +122,3 @@ bool parse_set(char *data) {
     }
 
     return true;
-}
