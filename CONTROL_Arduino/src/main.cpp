@@ -102,7 +102,7 @@ bool parse_set(char *data) {
     int switch_id;
     int switch_state;
     strtok(data, d_COMMAND_DELIMITER); // Skip command part
-    char* argument = strtok(nullptr, d_ARGUMENT_DELIMITER); // Get next argument
+    char *argument = strtok(nullptr, d_ARGUMENT_DELIMITER); // Get next argument
     while (argument != nullptr) {
         switch_id = -1;
         switch_state = -1;
@@ -122,3 +122,4 @@ bool parse_set(char *data) {
     }
 
     return true;
+}
