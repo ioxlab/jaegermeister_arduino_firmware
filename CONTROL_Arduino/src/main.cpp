@@ -14,17 +14,19 @@
 #define PIN_RELAIS_FOG 37
 #define PIN_RELAIS_FIREWORK 35
 #define PIN_RELAIS_BUBBLE 33
-#define PIN_RELAIS_ENABLE_SHOT 31
+#define PIN_RELAIS_LED 31
 #define PIN_RELAIS_DOOR 29
-#define PIN_RELAIS_TRIGGER_SHOT 27
-#define PIN_RELAIS_NC 25
+#define PIN_RELAIS_SHOT 27
 
-const int RELAIS_PINS[5] = {
-        PIN_RELAIS_FOG,
+#define NUM_RELAIS 6
+
+const int RELAIS_PINS[NUM_RELAIS] = {
+        PIN_RELAIS_LED,
         PIN_RELAIS_FIREWORK,
+        PIN_RELAIS_FOG,
         PIN_RELAIS_BUBBLE,
-        PIN_RELAIS_ENABLE_SHOT,
-        PIN_RELAIS_DOOR
+        PIN_RELAIS_DOOR,
+        PIN_RELAIS_SHOT,
 };
 
 // Parser defines
@@ -36,13 +38,12 @@ const int RELAIS_PINS[5] = {
 #define d_BAUD_RATE             (115200)
 
 void setup() {
-    pinMode(PIN_RELAIS_FOG, OUTPUT);
+    pinMode(PIN_RELAIS_LED, OUTPUT);
     pinMode(PIN_RELAIS_FIREWORK, OUTPUT);
+    pinMode(PIN_RELAIS_FOG, OUTPUT);
     pinMode(PIN_RELAIS_BUBBLE, OUTPUT);
-    pinMode(PIN_RELAIS_ENABLE_SHOT, OUTPUT);
     pinMode(PIN_RELAIS_DOOR, OUTPUT);
-    pinMode(PIN_RELAIS_TRIGGER_SHOT, OUTPUT);
-    pinMode(PIN_RELAIS_NC, OUTPUT);
+    pinMode(PIN_RELAIS_SHOT, OUTPUT);
 
     Serial.begin(d_BAUD_RATE);
 }
@@ -61,9 +62,9 @@ void process_data (char * data)
             Serial.print(d_BAD_SYNTAX);
         }
     } else if (strncmp("SHOT", data, 4) == 0) {
-        digitalWrite(PIN_RELAIS_TRIGGER_SHOT, HIGH);
+        digitalWrite(PIN_RELAIS_SHOT, HIGH);
         delay(500);
-        digitalWrite(PIN_RELAIS_TRIGGER_SHOT, LOW);
+        digitalWrite(PIN_RELAIS_SHOT, LOW);
         Serial.print(d_OK);
     } else if (strncmp("FREE", data, 4) == 0) {
         Serial.print(d_IS_FREE);
@@ -108,7 +109,7 @@ bool parse_set(char *data) {
         switch_state = -1;
 
         sscanf(argument, "L%d=%d", &switch_id, &switch_state); // Parse argument
-        if ((1 <= switch_id) && (switch_id <= 5)) {
+        if ((1 <= switch_id) && (switch_id <= NUM_RELAIS)) {
             if ((switch_state == 0) || (switch_state == 1)) {
                 digitalWrite(RELAIS_PINS[switch_id - 1], switch_state);
             } else {
