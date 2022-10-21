@@ -7,7 +7,7 @@
 #define VOLTS          5
 #define MAX_MA          5000
 
-#define BRIGHTNESS 1
+#define BRIGHTNESS 255
 #define NUM_STRIPS 4
 #define NUM_LEDS_0 60 // Jaegermeister Logo
 #define NUM_LEDS_1 62 // Fenster
@@ -19,10 +19,10 @@ CRGBArray<NUM_LEDS_1> LEDs_1;
 CRGBArray<NUM_LEDS_2> LEDs_2;
 CRGBArray<NUM_LEDS_3> LEDs_3;
 
-#define PIN_STRIP_0 PIND2
-#define PIN_STRIP_1 PIND3
-#define PIN_STRIP_2 PIND4
-#define PIN_STRIP_3 PIND5
+#define PIN_STRIP_0 5
+#define PIN_STRIP_1 9
+#define PIN_STRIP_2 3
+#define PIN_STRIP_3 6
 
 // Project defines
 #define d_ID                    ("LED\n")
