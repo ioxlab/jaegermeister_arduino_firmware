@@ -38,6 +38,15 @@ const int RELAIS_PINS[NUM_RELAIS] = {
 #define d_BAUD_RATE             (115200)
 
 void setup() {
+    // Set pulldowns
+    digitalWrite(PIN_RELAIS_LED, LOW);
+    digitalWrite(PIN_RELAIS_FIREWORK, LOW);
+    digitalWrite(PIN_RELAIS_FOG, LOW);
+    digitalWrite(PIN_RELAIS_BUBBLE, LOW);
+    digitalWrite(PIN_RELAIS_DOOR, LOW);
+    digitalWrite(PIN_RELAIS_SHOT, LOW);
+
+    // Set pinmodes
     pinMode(PIN_RELAIS_LED, OUTPUT);
     pinMode(PIN_RELAIS_FIREWORK, OUTPUT);
     pinMode(PIN_RELAIS_FOG, OUTPUT);
@@ -45,6 +54,7 @@ void setup() {
     pinMode(PIN_RELAIS_DOOR, OUTPUT);
     pinMode(PIN_RELAIS_SHOT, OUTPUT);
 
+    // Set output LOW
     digitalWrite(PIN_RELAIS_LED, LOW);
     digitalWrite(PIN_RELAIS_FIREWORK, LOW);
     digitalWrite(PIN_RELAIS_FOG, LOW);
