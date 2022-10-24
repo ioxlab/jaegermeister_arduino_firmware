@@ -28,12 +28,27 @@ unsigned long duration;
 
 
 void setup() {
+    // Set pulldowns LOW
+    digitalWrite(PIN_TRIGGER, LOW);
+    digitalWrite(PIN_PWM, LOW);
+    digitalWrite(PIN_IN1, LOW);
+    digitalWrite(PIN_IN2, LOW);
+    digitalWrite(PIN_BUBBLE_RELAIS, LOW);
+
+    // Set pinmodes
     pinMode(PIN_TRIGGER, OUTPUT);
     pinMode(PIN_ECHO, INPUT);
     pinMode(PIN_PWM, OUTPUT);
     pinMode(PIN_IN1, OUTPUT);
     pinMode(PIN_IN2, OUTPUT);
     pinMode(PIN_BUBBLE_RELAIS, OUTPUT);
+
+    // Set output LOW
+    digitalWrite(PIN_TRIGGER, LOW);
+    digitalWrite(PIN_PWM, LOW);
+    digitalWrite(PIN_IN1, LOW);
+    digitalWrite(PIN_IN2, LOW);
+    digitalWrite(PIN_BUBBLE_RELAIS, LOW);
 
     Serial.begin(d_BAUD_RATE);
 }
@@ -128,5 +143,6 @@ void processIncomingByte (const byte inByte)
 } // end of processIncomingByte
 
 void loop() {
-    while (Serial.available () > 0)
-        processIncomingByte(Serial.read ());
+    while (Serial.available() > 0)
+        processIncomingByte(Serial.read());
+}
