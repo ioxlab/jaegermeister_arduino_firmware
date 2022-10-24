@@ -16,12 +16,10 @@
 
 void setup ()
 {
-    // Set pulldown LOW
-    digitalWrite(PIN_FOG, LOW);
     // Set pinmode
     pinMode(PIN_FOG, OUTPUT);
     // Set output LOW
-    digitalWrite(PIN_FOG, LOW);
+    digitalWrite(PIN_FOG, HIGH);
     Serial.begin (d_BAUD_RATE);
 }
 
@@ -31,9 +29,9 @@ void process_data (char * data)
     if (strncmp("?", data, 1) == 0) {
         Serial.print(d_ID);
     } else if (strncmp("TRIGGER", data, 7) == 0) {
-        digitalWrite(PIN_FOG, HIGH);
-        delay(500);
         digitalWrite(PIN_FOG, LOW);
+        delay(500);
+        digitalWrite(PIN_FOG, HIGH);
         Serial.print(d_OK);
     } else {
         Serial.print(d_UNRECOGNIZED_COMMAND);
