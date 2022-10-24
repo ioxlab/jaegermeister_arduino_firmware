@@ -16,7 +16,12 @@
 
 void setup ()
 {
+    // Set pulldown LOW
+    digitalWrite(PIN_FOG, LOW);
+    // Set pinmode
     pinMode(PIN_FOG, OUTPUT);
+    // Set output LOW
+    digitalWrite(PIN_FOG, LOW);
     Serial.begin (d_BAUD_RATE);
 }
 
