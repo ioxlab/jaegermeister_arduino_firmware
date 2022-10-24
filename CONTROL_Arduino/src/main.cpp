@@ -45,6 +45,13 @@ void setup() {
     pinMode(PIN_RELAIS_DOOR, OUTPUT);
     pinMode(PIN_RELAIS_SHOT, OUTPUT);
 
+    digitalWrite(PIN_RELAIS_LED, LOW);
+    digitalWrite(PIN_RELAIS_FIREWORK, LOW);
+    digitalWrite(PIN_RELAIS_FOG, LOW);
+    digitalWrite(PIN_RELAIS_BUBBLE, LOW);
+    digitalWrite(PIN_RELAIS_DOOR, LOW);
+    digitalWrite(PIN_RELAIS_SHOT, LOW);
+
     Serial.begin(d_BAUD_RATE);
 }
 
