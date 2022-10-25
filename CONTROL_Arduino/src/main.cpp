@@ -11,12 +11,13 @@
 #define d_INVALID_SWITCH_STATE  (-1)
 
 // Relais
-#define PIN_RELAIS_FOG 37
-#define PIN_RELAIS_FIREWORK 35
-#define PIN_RELAIS_BUBBLE 33
+#define PIN_RELAIS_FOG 25
+#define PIN_RELAIS_FIREWORK 27
+#define PIN_RELAIS_BUBBLE 29
 #define PIN_RELAIS_LED 31
-#define PIN_RELAIS_DOOR 29
-#define PIN_RELAIS_SHOT 27
+#define PIN_RELAIS_DOOR 33
+#define PIN_RELAIS_SHOT 35
+#define PIN_RELAIS_NC 37
 
 #define NUM_RELAIS 6
 
@@ -117,7 +118,7 @@ bool parse_set(char *data) {
         switch_id = -1;
         switch_state = -1;
 
-        sscanf(argument, "L%d=%d", &switch_id, &switch_state); // Parse argument
+        sscanf(argument, "S%d=%d", &switch_id, &switch_state); // Parse argument
         if ((1 <= switch_id) && (switch_id <= NUM_RELAIS)) {
             if ((switch_state == 0) || (switch_state == 1)) {
                 digitalWrite(RELAIS_PINS[switch_id - 1], !switch_state);
