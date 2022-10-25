@@ -54,9 +54,9 @@ void fill_tank()
         if (duration != 0)
             break;
     }
-    Serial.print("Duration = ");
-    Serial.print(duration);
-    Serial.print("\n");
+    //Serial.print("Duration = ");
+    //Serial.print(duration);
+    //Serial.print("\n");
 
     // If the fill level is below the threshold
     if (duration > (MIN_FILL_DISTANCE+1)*58)
