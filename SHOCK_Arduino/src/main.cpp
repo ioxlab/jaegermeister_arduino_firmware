@@ -222,10 +222,8 @@ bool parse_set(char *data) {
     strtok(data, d_COMMAND_DELIMITER); // Skip command part
     char *argument = strtok(nullptr, d_ARGUMENT_DELIMITER); // Get next argument
     while (argument != nullptr) {
-            _shock_level = InvalidLevel;
-
-            if (strncmp(argument, "L", 1) == 0) {
-                    int num_level = 0;
+        if (strncmp(argument, "L", 1) == 0) {
+            int num_level = 0;
                     sscanf(argument, "L=%d", &num_level);
                     if (num_level == 0) return false;
                     _shock_level = (Level) num_level;
