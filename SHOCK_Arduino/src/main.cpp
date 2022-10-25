@@ -4,7 +4,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *  Defines
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 // Parser defines
 #define d_ID                    ("SHOCK\n")
 #define d_OK                    ("OK\n")
@@ -47,7 +46,9 @@
 #define d_SHOCK_TIME_LEVEL3_MS (4)
 #define d_SHOCK_TIME_LEVEL4_MS (1)
 
-#define d_SHOCK_TIME_OFFSET     (3000)
+#define d_SHOCK_TIME_OFFSET     (2000)
+#define d_FORCE_THRESHOLD_DIGITS    (75)
+#define d_MAX_NUM_MEASUREMENTS      (10)
 
 
 // Internal defines
@@ -78,7 +79,7 @@ enum Level {
 enum e_PadTouchStatus
 {
     e_PadTouchStatusUntouched = 0,
-    e_PadTouchStatusTouched,
+    e_PadTouchStatusTouched = 1,
     e_PadTouchStatusCount
 };
 
@@ -98,12 +99,12 @@ enum Pattern {
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 Pattern led_strip_patterns[d_NUM_SHOCKPADS] =
-{
-    Pattern::REGENBOGEN_UMLAUFEND,
-    Pattern::REGENBOGEN_UMLAUFEND,
-    Pattern::REGENBOGEN_UMLAUFEND,
-    Pattern::REGENBOGEN_UMLAUFEND,
-};
+    {
+        Pattern::REGENBOGEN_UMLAUFEND,
+        Pattern::REGENBOGEN_UMLAUFEND,
+        Pattern::REGENBOGEN_UMLAUFEND,
+        Pattern::REGENBOGEN_UMLAUFEND,
+    };
 
 CRGBArray<d_NUM_LEDS_PER_RING> msa_LedStripCh1;
 CRGBArray<d_NUM_LEDS_PER_RING> msa_LedStripCh2;
@@ -111,10 +112,11 @@ CRGBArray<d_NUM_LEDS_PER_RING> msa_LedStripCh3;
 CRGBArray<d_NUM_LEDS_PER_RING> msa_LedStripCh4;
 
 
-//ShockPad shock_pads[d_NUM_SHOCKPADS] =                  {DONT_SHOCK, DONT_SHOCK, DONT_SHOCK, DONT_SHOCK};
-ShockPad shock_pads[d_NUM_SHOCKPADS] =                  {SHOCK, SHOCK, SHOCK, SHOCK};
-e_PadTouchStatus mea_TouchStatus [d_NUM_SHOCKPADS] =    {e_PadTouchStatusUntouched, e_PadTouchStatusUntouched, e_PadTouchStatusUntouched, e_PadTouchStatusUntouched, };
-Level shock_level = Level2;
+uint8_t shock_pads[d_NUM_SHOCKPADS] =  {DONT_SHOCK, DONT_SHOCK, DONT_SHOCK, DONT_SHOCK};
+ShockPad _shock_pads[d_NUM_SHOCKPADS] = {DONT_SHOCK, DONT_SHOCK, DONT_SHOCK, DONT_SHOCK};
+
+Level shock_level = Level1;
+Level _shock_level = InvalidLevel;
 bool parse_set(char *string);
 
 
@@ -123,6 +125,8 @@ bool parse_set(char *string);
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 void Func_ShockPads(void);
 void Func_Trigger(void);
+void Func_MeasureSensorBeforeShock(void);
+void Func_MeasureSensorAfterShock(uint8_t *au8p_SensorArray);
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -133,22 +137,22 @@ void setup ()
     // Serial setup
     Serial.begin (d_BAUD_RATE);
     // Setup ch1
-    pinMode(d_FORCE_SENSE_CH1,  INPUT);
+    pinMode(d_FORCE_SENSE_CH1,  INPUT_PULLUP);
     pinMode(d_LED_DATA_CH1,     OUTPUT);
     pinMode(d_SHOCKPAD_EN_CH1,  OUTPUT);
 
     // Setup ch2
-    pinMode(d_FORCE_SENSE_CH2,  INPUT);
+    pinMode(d_FORCE_SENSE_CH2,  INPUT_PULLUP);
     pinMode(d_LED_DATA_CH2,     OUTPUT);
     pinMode(d_SHOCKPAD_EN_CH2,  OUTPUT);
 
     // Setup ch3
-    pinMode(d_FORCE_SENSE_CH2,  INPUT);
+    pinMode(d_FORCE_SENSE_CH2,  INPUT_PULLUP);
     pinMode(d_LED_DATA_CH2,     OUTPUT);
     pinMode(d_SHOCKPAD_EN_CH2,  OUTPUT);
 
     // Setup ch4
-    pinMode(d_FORCE_SENSE_CH2,  INPUT);
+    pinMode(d_FORCE_SENSE_CH2,  INPUT_PULLUP);
     pinMode(d_LED_DATA_CH2,     OUTPUT);
     pinMode(d_SHOCKPAD_EN_CH2,  OUTPUT);
 
@@ -169,20 +173,21 @@ void process_data (char * data)
 {
     if (strncmp("?", data, 1) == 0) {
             Serial.print(d_ID);
-            Func_ShockPads();
 
-        } else if (strncmp("SET", data, 4) == 0) {
+        } else if (strncmp("SET", data, 3) == 0) {
             if (parse_set(data)) {
                     Serial.print(d_OK);
                 } else {
                     Serial.print(d_BAD_SYNTAX);
                 }
         } else if (strncmp("PLAY", data, 3) == 0) {
-            char p1, p2, p3, p4;
             Func_ShockPads();
-            char response[21];
-            sprintf(response, "P1=%d;P2=%d;P3=%d;P4=%d\n", p1, p2, p3, p4);
-            Serial.print(response);
+
+            // Set shock pad values back to zero
+            shock_pads[0] = DONT_SHOCK;
+            shock_pads[1] = DONT_SHOCK;
+            shock_pads[2] = DONT_SHOCK;
+            shock_pads[3] = DONT_SHOCK;
         } else {
             Serial.print(d_UNRECOGNIZED_COMMAND);
         }
@@ -216,14 +221,13 @@ void loop ()
 }
 
 bool parse_set(char *data) {
-    Level _shock_level = InvalidLevel;
-    ShockPad _shock_pads[4] = {DONT_SHOCK, DONT_SHOCK, DONT_SHOCK, DONT_SHOCK};
+
 
     strtok(data, d_COMMAND_DELIMITER); // Skip command part
     char *argument = strtok(nullptr, d_ARGUMENT_DELIMITER); // Get next argument
     while (argument != nullptr) {
-        if (strncmp(argument, "L", 1) == 0) {
-            int num_level = 0;
+            if (strncmp(argument, "L", 1) == 0) {
+                    int num_level = 0;
                     sscanf(argument, "L=%d", &num_level);
                     if (num_level == 0) return false;
                     _shock_level = (Level) num_level;
@@ -247,6 +251,7 @@ bool parse_set(char *data) {
     shock_level = _shock_level;
     for (int i = 0; i < 4; ++i) {
             shock_pads[i] = _shock_pads[i];
+            Serial.println (shock_pads[i]);
         }
 
     return true;
@@ -259,57 +264,60 @@ void Func_ShockPads(void)
     unsigned long lul_ShockTimestamp = 0;
     double ld16_StroboDelay_ms = d_STROBO_DELAY;
 
+    // Check if the sensors are being pressed correctly
+    Func_MeasureSensorBeforeShock ();
     // calculate a random number between 3000 and 10.000
     lu16_TimerValue= 1000*random(d_LOWER_TIMER_LIMIT, d_UPPER_TIMER_LIMIT);
-
     // calculate shock timestamp
     lul_ShockTimestamp = millis() + lu16_TimerValue;
     // loop while actual and normal time are different
     while (lul_ActualTimestamp < lul_ShockTimestamp)
-    {
-        // start led flickering until shock comes
-        // check which leds should be light up
-        for(uint8_t lu8_PadIndex = 0; lu8_PadIndex < d_NUM_SHOCKPADS; lu8_PadIndex++)
         {
-            if (shock_pads[lu8_PadIndex] == SHOCK)
-            {
-                delay(ld16_StroboDelay_ms);
-                    ld16_StroboDelay_ms += d_STROBO_OFFSET_DELAY_MS;
-                // light up the led-rings in the shocker pads
-                switch (lu8_PadIndex)
-                    {
-                        case 0:
-                            msa_LedStripCh1.fill_solid (CRGB::Wheat);
-                            break;
-                        case 1:
-                            msa_LedStripCh2.fill_solid (CRGB::Wheat);
-                            break;
-                        case 2:
-                            msa_LedStripCh3.fill_solid (CRGB::Wheat);
-                            break;
-                        case 3:
-                            msa_LedStripCh4.fill_solid (CRGB::Wheat);
-                            break;
-                        default:
-                            break;
-                    }
-                FastLED.show();
+            // start led flickering until shock comes
+            // check which leds should be light up
+            for(uint8_t lu8_PadIndex = 0; lu8_PadIndex < d_NUM_SHOCKPADS; lu8_PadIndex++)
+                {
+                    if (shock_pads[lu8_PadIndex] == SHOCK)
+                        {
+                            delay(ld16_StroboDelay_ms);
+                            ld16_StroboDelay_ms += d_STROBO_OFFSET_DELAY_MS;
+                            // light up the led-rings in the shocker pads
+                            switch (lu8_PadIndex)
+                                {
+                                    case 0:
+                                        msa_LedStripCh1.fill_solid (CRGB::Wheat);
+                                    break;
+                                    case 1:
+                                        msa_LedStripCh2.fill_solid (CRGB::Wheat);
+                                    break;
+                                    case 2:
+                                        msa_LedStripCh3.fill_solid (CRGB::Wheat);
+                                    break;
+                                    case 3:
+                                        msa_LedStripCh4.fill_solid (CRGB::Wheat);
+                                    break;
+                                    default:
+                                        break;
+                                }
+                            FastLED.show();
+                        }
                 }
+            FastLED.clear ();
+            FastLED.show();
+            // get current timestamp
+            lul_ActualTimestamp = millis();
         }
-        FastLED.clear ();
-        FastLED.show();
-        // get current timestamp
-        lul_ActualTimestamp = millis();
-    }
     // Shock the corresponding pads with the shock level
     Func_Trigger();
 
+    // Reset touch status
+    shock_pads[0] = DONT_SHOCK;
+    shock_pads[1] = DONT_SHOCK;
+    shock_pads[2] = DONT_SHOCK;
+    shock_pads[3] = DONT_SHOCK;
 
     // measure which pad is held
-
-    // return message that corresponds to the pads that are pressed
-    Serial.print("Ok\n");
-
+    Func_MeasureSensorAfterShock (&shock_pads[0]);
 }
 
 void Func_Trigger()
@@ -318,159 +326,287 @@ void Func_Trigger()
     unsigned long lul_ShockTimestamp = lul_ActualTriggerTimestamp + d_SHOCK_TIME_OFFSET;
 
     while(lul_ActualTriggerTimestamp < lul_ShockTimestamp)
-    {
-        // check which leds should be light up
-        for (uint8_t lu8_PadIndex = 0; lu8_PadIndex < d_NUM_SHOCKPADS; lu8_PadIndex++)
-            {
-                if ((shock_pads[lu8_PadIndex] == SHOCK) && shock_level == Level1)
+        {
+            // check which leds should be light up
+            for (uint8_t lu8_PadIndex = 0; lu8_PadIndex < d_NUM_SHOCKPADS; lu8_PadIndex++)
+                {
+                    if ((shock_pads[lu8_PadIndex] == SHOCK) && shock_level == Level1)
+                        {
+                            switch (lu8_PadIndex)
+                                {
+                                    case 0:
+                                        digitalWrite (d_SHOCKPAD_EN_CH1, HIGH);
+                                    break;
+                                    case 1:
+                                        digitalWrite (d_SHOCKPAD_EN_CH2, HIGH);
+                                    break;
+                                    case 2:
+                                        digitalWrite (d_SHOCKPAD_EN_CH3, HIGH);
+                                    break;
+                                    case 3:
+                                        digitalWrite (d_SHOCKPAD_EN_CH4, HIGH);
+                                    break;
+                                    default:break;
+                                }
+                            delay (d_SHOCK_TIME_LEVEL1_MS);
+                            switch (lu8_PadIndex)
+                                {
+                                    case 0:
+                                        digitalWrite (d_SHOCKPAD_EN_CH1, LOW);
+                                    break;
+                                    case 1:
+                                        digitalWrite (d_SHOCKPAD_EN_CH2, LOW);
+                                    break;
+                                    case 2:
+                                        digitalWrite (d_SHOCKPAD_EN_CH3, LOW);
+                                    break;
+                                    case 3:
+                                        digitalWrite (d_SHOCKPAD_EN_CH4, LOW);
+                                    break;
+                                    default:break;
+                                }
+                            delay (d_SHOCK_TIME_LEVEL1_MS);
+                        }
+                    if ((shock_pads[lu8_PadIndex] == SHOCK) && shock_level == Level2)
+                        {
+                            switch (lu8_PadIndex)
+                                {
+                                    case 0:
+                                        digitalWrite (d_SHOCKPAD_EN_CH1, HIGH);
+                                    break;
+                                    case 1:
+                                        digitalWrite (d_SHOCKPAD_EN_CH2, HIGH);
+                                    break;
+                                    case 2:
+                                        digitalWrite (d_SHOCKPAD_EN_CH3, HIGH);
+                                    break;
+                                    case 3:
+                                        digitalWrite (d_SHOCKPAD_EN_CH4, HIGH);
+                                    break;
+                                    default:break;
+                                }
+                            delay (d_SHOCK_TIME_LEVEL2_MS);
+                            switch (lu8_PadIndex)
+                                {
+                                    case 0:
+                                        digitalWrite (d_SHOCKPAD_EN_CH1, LOW);
+                                    break;
+                                    case 1:
+                                        digitalWrite (d_SHOCKPAD_EN_CH2, LOW);
+                                    break;
+                                    case 2:
+                                        digitalWrite (d_SHOCKPAD_EN_CH3, LOW);
+                                    break;
+                                    case 3:
+                                        digitalWrite (d_SHOCKPAD_EN_CH4, LOW);
+                                    break;
+                                    default:break;
+                                }
+                            delay (d_SHOCK_TIME_LEVEL2_MS);
+                        }
+                    if ((shock_pads[lu8_PadIndex] == SHOCK) && shock_level == Level3)
+                        {
+                            switch (lu8_PadIndex)
+                                {
+                                    case 0:
+                                        digitalWrite (d_SHOCKPAD_EN_CH1, HIGH);
+                                    break;
+                                    case 1:
+                                        digitalWrite (d_SHOCKPAD_EN_CH2, HIGH);
+                                    break;
+                                    case 2:
+                                        digitalWrite (d_SHOCKPAD_EN_CH3, HIGH);
+                                    break;
+                                    case 3:
+                                        digitalWrite (d_SHOCKPAD_EN_CH4, HIGH);
+                                    break;
+                                    default:break;
+                                }
+                            delay (d_SHOCK_TIME_LEVEL3_MS);
+                            switch (lu8_PadIndex)
+                                {
+                                    case 0:
+                                        digitalWrite (d_SHOCKPAD_EN_CH1, LOW);
+                                    break;
+                                    case 1:
+                                        digitalWrite (d_SHOCKPAD_EN_CH2, LOW);
+                                    break;
+                                    case 2:
+                                        digitalWrite (d_SHOCKPAD_EN_CH3, LOW);
+                                    break;
+                                    case 3:
+                                        digitalWrite (d_SHOCKPAD_EN_CH4, LOW);
+                                    break;
+                                    default:break;
+                                }
+                            delay (d_SHOCK_TIME_LEVEL3_MS);
+                        }
+                    if ((shock_pads[lu8_PadIndex] == SHOCK) && shock_level == Level4)
+                        {
+                            switch (lu8_PadIndex)
+                                {
+                                    case 0:
+                                        digitalWrite (d_SHOCKPAD_EN_CH1, HIGH);
+                                    break;
+                                    case 1:
+                                        digitalWrite (d_SHOCKPAD_EN_CH2, HIGH);
+                                    break;
+                                    case 2:
+                                        digitalWrite (d_SHOCKPAD_EN_CH3, HIGH);
+                                    break;
+                                    case 3:
+                                        digitalWrite (d_SHOCKPAD_EN_CH4, HIGH);
+                                    break;
+                                    default:break;
+                                }
+                            delay (d_SHOCK_TIME_LEVEL4_MS);
+                            switch (lu8_PadIndex)
+                                {
+                                    case 0:
+                                        digitalWrite (d_SHOCKPAD_EN_CH1, LOW);
+                                    break;
+                                    case 1:
+                                        digitalWrite (d_SHOCKPAD_EN_CH2, LOW);
+                                    break;
+                                    case 2:
+                                        digitalWrite (d_SHOCKPAD_EN_CH3, LOW);
+                                    break;
+                                    case 3:
+                                        digitalWrite (d_SHOCKPAD_EN_CH4, LOW);
+                                    break;
+                                    default:break;
+                                }
+                            delay (d_SHOCK_TIME_LEVEL4_MS);
+                        }
+                }
+            lul_ActualTriggerTimestamp = millis();
+        }
+}
+
+void Func_MeasureSensorBeforeShock(void)
+{
+    // Measure if the corresponding sensors are being pressed
+    for(uint8_t lu8_PadIndex = 0; lu8_PadIndex < d_NUM_SHOCKPADS; lu8_PadIndex++)
+        {
+            if (SHOCK == shock_pads[lu8_PadIndex])
                 {
                     switch (lu8_PadIndex)
-                    {
-                        case 0:
-                            digitalWrite (d_SHOCKPAD_EN_CH1, HIGH);
-                        break;
-                        case 1:
-                            digitalWrite (d_SHOCKPAD_EN_CH2, HIGH);
-                        break;
-                        case 2:
-                            digitalWrite (d_SHOCKPAD_EN_CH3, HIGH);
-                        break;
-                        case 3:
-                            digitalWrite (d_SHOCKPAD_EN_CH4, HIGH);
-                        break;
-                        default:break;
-                    }
-                    delay (d_SHOCK_TIME_LEVEL1_MS);
+                        {
+
+                            case 0:
+                                while (d_FORCE_THRESHOLD_DIGITS < analogRead(d_FORCE_SENSE_CH1))
+                                {
+                                    delayMicroseconds (1);
+                                }
+                                break;
+
+                            case 1:
+                                while (d_FORCE_THRESHOLD_DIGITS < analogRead(d_FORCE_SENSE_CH2))
+                                {
+                                    delayMicroseconds (1);
+                                }
+                                break;
+
+                            case 2:
+                                while (d_FORCE_THRESHOLD_DIGITS < analogRead(d_FORCE_SENSE_CH3))
+                                {
+                                    delayMicroseconds (1);
+                                }
+                                break;
+
+                            case 3:
+                                while (d_FORCE_THRESHOLD_DIGITS < analogRead(d_FORCE_SENSE_CH4))
+                                {
+                                    delayMicroseconds (1);
+                                }
+                                break;
+
+                            default:
+                                break;
+                        }
+                }
+        }
+}
+
+void Func_MeasureSensorAfterShock(uint8_t *au8p_SensorArray)
+{
+    uint8_t lu8_LoopCounter = 0;
+    uint8_t lu8a_SensorArray[d_NUM_SHOCKPADS] = {0,0,0,0};
+    // Measure if the corresponding sensors are being pressed
+    for(uint8_t lu8_PadIndex = 0; lu8_PadIndex < d_NUM_SHOCKPADS; lu8_PadIndex++)
+        {
                     switch (lu8_PadIndex)
                         {
                             case 0:
-                                digitalWrite (d_SHOCKPAD_EN_CH1, LOW);
+                                lu8_LoopCounter = 0;
+                                while ((lu8_LoopCounter <= d_MAX_NUM_MEASUREMENTS))
+                                {
+                                    if(analogRead (d_FORCE_SENSE_CH1) < d_FORCE_THRESHOLD_DIGITS)
+                                    {
+                                            lu8a_SensorArray[0] = SHOCK;
+                                    }
+                                    else
+                                    {
+                                            lu8a_SensorArray[0] = DONT_SHOCK;
+                                    };
+                                    lu8_LoopCounter++;
+                                }
                             break;
+
                             case 1:
-                                digitalWrite (d_SHOCKPAD_EN_CH2, LOW);
-                            break;
+                                lu8_LoopCounter = 0;
+                                while ((lu8_LoopCounter <= d_MAX_NUM_MEASUREMENTS))
+                                {
+                                    if(analogRead (d_FORCE_SENSE_CH2) < d_FORCE_THRESHOLD_DIGITS)
+                                        {
+                                            lu8a_SensorArray[1] = SHOCK;
+                                        }
+                                    else
+                                        {
+                                            lu8a_SensorArray[1] = DONT_SHOCK;
+                                        };
+                                    lu8_LoopCounter++;
+                                }
+                                break;
+
                             case 2:
-                                digitalWrite (d_SHOCKPAD_EN_CH3, LOW);
-                            break;
+                                lu8_LoopCounter = 0;
+                                while ((lu8_LoopCounter <= d_MAX_NUM_MEASUREMENTS))
+                                {
+                                    if(analogRead (d_FORCE_SENSE_CH3) < d_FORCE_THRESHOLD_DIGITS)
+                                        {
+                                            lu8a_SensorArray[2] = SHOCK;
+                                        }
+                                    else
+                                        {
+                                            lu8a_SensorArray[2] = DONT_SHOCK;
+                                        };
+                                    lu8_LoopCounter++;
+                                }
+                             break;
+
                             case 3:
-                                digitalWrite (d_SHOCKPAD_EN_CH4, LOW);
-                            break;
-                            default:break;
+                                lu8_LoopCounter = 0;
+                                while ((lu8_LoopCounter <= d_MAX_NUM_MEASUREMENTS))
+                                {
+                                    if(analogRead (d_FORCE_SENSE_CH4) < d_FORCE_THRESHOLD_DIGITS)
+                                    {
+                                        lu8a_SensorArray[3] = SHOCK;
+                                    }
+                                    else
+                                    {
+                                        lu8a_SensorArray[3] = DONT_SHOCK;
+                                    };
+                                    lu8_LoopCounter++;
+                                }
+                                break;
+
+                            default:
+                                break;
                         }
-                    delay (d_SHOCK_TIME_LEVEL1_MS);
-                }
-                if ((shock_pads[lu8_PadIndex] == SHOCK) && shock_level == Level2)
-                    {
-                        switch (lu8_PadIndex)
-                            {
-                                case 0:
-                                    digitalWrite (d_SHOCKPAD_EN_CH1, HIGH);
-                                break;
-                                case 1:
-                                    digitalWrite (d_SHOCKPAD_EN_CH2, HIGH);
-                                break;
-                                case 2:
-                                    digitalWrite (d_SHOCKPAD_EN_CH3, HIGH);
-                                break;
-                                case 3:
-                                    digitalWrite (d_SHOCKPAD_EN_CH4, HIGH);
-                                break;
-                                default:break;
-                            }
-                        delay (d_SHOCK_TIME_LEVEL2_MS);
-                        switch (lu8_PadIndex)
-                            {
-                                case 0:
-                                    digitalWrite (d_SHOCKPAD_EN_CH1, LOW);
-                                break;
-                                case 1:
-                                    digitalWrite (d_SHOCKPAD_EN_CH2, LOW);
-                                break;
-                                case 2:
-                                    digitalWrite (d_SHOCKPAD_EN_CH3, LOW);
-                                break;
-                                case 3:
-                                    digitalWrite (d_SHOCKPAD_EN_CH4, LOW);
-                                break;
-                                default:break;
-                            }
-                        delay (d_SHOCK_TIME_LEVEL2_MS);
-                    }
-                if ((shock_pads[lu8_PadIndex] == SHOCK) && shock_level == Level3)
-                    {
-                        switch (lu8_PadIndex)
-                            {
-                                case 0:
-                                    digitalWrite (d_SHOCKPAD_EN_CH1, HIGH);
-                                break;
-                                case 1:
-                                    digitalWrite (d_SHOCKPAD_EN_CH2, HIGH);
-                                break;
-                                case 2:
-                                    digitalWrite (d_SHOCKPAD_EN_CH3, HIGH);
-                                break;
-                                case 3:
-                                    digitalWrite (d_SHOCKPAD_EN_CH4, HIGH);
-                                break;
-                                default:break;
-                            }
-                        delay (d_SHOCK_TIME_LEVEL3_MS);
-                        switch (lu8_PadIndex)
-                            {
-                                case 0:
-                                    digitalWrite (d_SHOCKPAD_EN_CH1, LOW);
-                                break;
-                                case 1:
-                                    digitalWrite (d_SHOCKPAD_EN_CH2, LOW);
-                                break;
-                                case 2:
-                                    digitalWrite (d_SHOCKPAD_EN_CH3, LOW);
-                                break;
-                                case 3:
-                                    digitalWrite (d_SHOCKPAD_EN_CH4, LOW);
-                                break;
-                                default:break;
-                            }
-                        delay (d_SHOCK_TIME_LEVEL3_MS);
-                    }
-                if ((shock_pads[lu8_PadIndex] == SHOCK) && shock_level == Level4)
-                    {
-                        switch (lu8_PadIndex)
-                            {
-                                case 0:
-                                    digitalWrite (d_SHOCKPAD_EN_CH1, HIGH);
-                                break;
-                                case 1:
-                                    digitalWrite (d_SHOCKPAD_EN_CH2, HIGH);
-                                break;
-                                case 2:
-                                    digitalWrite (d_SHOCKPAD_EN_CH3, HIGH);
-                                break;
-                                case 3:
-                                    digitalWrite (d_SHOCKPAD_EN_CH4, HIGH);
-                                break;
-                                default:break;
-                            }
-                        delay (d_SHOCK_TIME_LEVEL4_MS);
-                        switch (lu8_PadIndex)
-                            {
-                                case 0:
-                                    digitalWrite (d_SHOCKPAD_EN_CH1, LOW);
-                                break;
-                                case 1:
-                                    digitalWrite (d_SHOCKPAD_EN_CH2, LOW);
-                                break;
-                                case 2:
-                                    digitalWrite (d_SHOCKPAD_EN_CH3, LOW);
-                                break;
-                                case 3:
-                                    digitalWrite (d_SHOCKPAD_EN_CH4, LOW);
-                                break;
-                                default:break;
-                            }
-                        delay (d_SHOCK_TIME_LEVEL4_MS);
-                    }
-            }
-        lul_ActualTriggerTimestamp = millis();
-    }
+        }
+
+    char response[21];
+    sprintf(response, "P1=%d;P2=%d;P3=%d;P4=%d\n", lu8a_SensorArray[0], lu8a_SensorArray[1], lu8a_SensorArray[2], lu8a_SensorArray[3]);
+    Serial.print(response);
 }
