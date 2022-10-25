@@ -1,7 +1,17 @@
 #include <Arduino.h>
+#include <DMXSerial.h>
+#include <DMXSerial_avr.h>
 
 // Project defines
 #define d_ID                    ("DMX\n")
+#define d_OK                    ("OK\n")
+#define d_BAD_SYNTAX            ("BAD_SYNTAX\n")
+#define d_UNRECOGNIZED_COMMAND  ("UNRECOGNIZED_COMMAND\n")
+
+//variables
+
+uint8_t spark_height = 150;
+int spark_duration = 5000;
 
 // Parser defines
 #define d_MAX_STRING_SIZE       (64)
@@ -10,48 +20,50 @@
 // Communication defines
 #define d_BAUD_RATE             (115200)
 
-char mca_StringBuffer[d_MAX_STRING_SIZE] = {0};
-char mc_ReadedBytes = 0;
 
-void setup ()
-{
-    Serial.begin (d_BAUD_RATE);
+void setup() {
+    DMXSerial.init(DMXController);
+    Serial.begin(d_BAUD_RATE);
+
+
 }
 
-int incomingByte = 0; // For incoming serial data
+void process_data(char *data) {
+    if (strncmp("?", data, 1) == 0) {
+        Serial.print(d_ID);
+    } else if (strncmp("TRIGGER", data, 7) == 0) {
+        // TODO: Trigger firework here
 
-void loop ()
-{
+        DMXSerial.write(1, spark_height);  // turn on
+        delay(spark_duration);  // wait a little bit
+        DMXSerial.write(1, 0);  // turn off
 
-    // Read until \n
-    while (true)
-        {
-            // Wait until bytes available
-            while (Serial.available () == 0);
-            // Read byte
-            incomingByte = Serial.read ();
+        Serial.print(d_OK);
+    } else {
+        Serial.print(d_UNRECOGNIZED_COMMAND);
+    }
+}  // end of process_data
 
-            // If it is a \n stop reading
-            if (incomingByte == '\n')
-                {
-                    break;
-                }
-            else
-                {
-                    // Otherwise, add char to buffer
-                    mca_StringBuffer[mc_ReadedBytes] = (char) incomingByte;
-                    mc_ReadedBytes += 1;
-                }
-        }
+void processIncomingByte(const byte inByte) {
+    static char input_line[d_MAX_STRING_SIZE];
+    static unsigned int input_pos = 0;
 
-    if (!strcmp (mca_StringBuffer, "?"))
-        {
-            Serial.print (d_ID);
-        }
-    else
-        {
-            Serial.print ("UNRECOGNIZED COMMAND\n");
-        }
-    mc_ReadedBytes = 0;
-    memset (&mca_StringBuffer,0,d_MAX_STRING_SIZE);
+    switch (inByte) {
+        case '\n':   // end of text
+            input_line[input_pos] = 0;  // terminating null byte
+            process_data(input_line);
+            input_pos = 0;
+            break;
+        case '\r':   // discard carriage return
+            break;
+        default:
+            if (input_pos < (d_MAX_STRING_SIZE - 1))
+                input_line[input_pos++] = inByte;
+            break;
+    }  // end of switch
+} // end of processIncomingByte
+
+void loop() {
+    while (Serial.available() > 0)
+        processIncomingByte(Serial.read());
 }
