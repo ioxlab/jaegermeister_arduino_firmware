@@ -28,12 +28,20 @@ unsigned long duration;
 
 
 void setup() {
+    // Set pinmodes
     pinMode(PIN_TRIGGER, OUTPUT);
     pinMode(PIN_ECHO, INPUT);
     pinMode(PIN_PWM, OUTPUT);
     pinMode(PIN_IN1, OUTPUT);
     pinMode(PIN_IN2, OUTPUT);
     pinMode(PIN_BUBBLE_RELAIS, OUTPUT);
+
+    // Set output LOW
+    digitalWrite(PIN_TRIGGER, LOW);
+    digitalWrite(PIN_PWM, LOW);
+    digitalWrite(PIN_IN1, LOW);
+    digitalWrite(PIN_IN2, LOW);
+    digitalWrite(PIN_BUBBLE_RELAIS, HIGH);
 
     Serial.begin(d_BAUD_RATE);
 }
@@ -92,9 +100,9 @@ void process_data (const char * data)
         // Fill tank or top it off
         fill_tank();
         // Make bubbles
-        digitalWrite(PIN_BUBBLE_RELAIS, HIGH);
-        delay(10000);
         digitalWrite(PIN_BUBBLE_RELAIS, LOW);
+        delay(10000);
+        digitalWrite(PIN_BUBBLE_RELAIS, HIGH);
         Serial.print(d_OK);
     } else if (strncmp("OFF", data, 3) == 0) {
         empty_tank();
@@ -128,5 +136,6 @@ void processIncomingByte (const byte inByte)
 } // end of processIncomingByte
 
 void loop() {
-    while (Serial.available () > 0)
-        processIncomingByte(Serial.read ());
+    while (Serial.available() > 0)
+        processIncomingByte(Serial.read());
+}
