@@ -5,6 +5,8 @@
 #define d_OK                    ("OK\n")
 #define d_UNRECOGNIZED_COMMAND  ("UNRECOGNIZED_COMMAND\n")
 
+#define FOG_TIME                (1000)
+
 // Fog machine
 #define PIN_FOG 13
 
@@ -30,7 +32,7 @@ void process_data (char * data)
         Serial.print(d_ID);
     } else if (strncmp("TRIGGER", data, 7) == 0) {
         digitalWrite(PIN_FOG, LOW);
-        delay(500);
+        delay(FOG_TIME);
         digitalWrite(PIN_FOG, HIGH);
         Serial.print(d_OK);
     } else {
