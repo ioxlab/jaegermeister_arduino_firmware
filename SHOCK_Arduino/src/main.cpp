@@ -14,20 +14,20 @@
 #define d_MAX_STRING_SIZE       (64)
 
 // Pin defines
-#define d_SHOCKPAD_EN_CH1      (7)
-#define d_SHOCKPAD_EN_CH2      (8)
-#define d_SHOCKPAD_EN_CH3      (9)
-#define d_SHOCKPAD_EN_CH4      (10)
+#define d_SHOCKPAD_EN_CH1      (48)
+#define d_SHOCKPAD_EN_CH2      (50)
+#define d_SHOCKPAD_EN_CH3      (46)
+#define d_SHOCKPAD_EN_CH4      (52)
 
 #define d_FORCE_SENSE_CH1      (A0)
-#define d_FORCE_SENSE_CH2      (A0)
-#define d_FORCE_SENSE_CH3      (A0)
-#define d_FORCE_SENSE_CH4      (A0)
+#define d_FORCE_SENSE_CH2      (A3)
+#define d_FORCE_SENSE_CH3      (A2)
+#define d_FORCE_SENSE_CH4      (A1)
 
 #define d_LED_DATA_CH1         (6)
-#define d_LED_DATA_CH2         (4)
+#define d_LED_DATA_CH2         (3)
 #define d_LED_DATA_CH3         (2)
-#define d_LED_DATA_CH4         (3)
+#define d_LED_DATA_CH4         (4)
 
 // Led defines
 #define d_NUM_LEDS_PER_RING    (32)
@@ -47,7 +47,7 @@
 #define d_SHOCK_TIME_LEVEL4_MS (1)
 
 #define d_SHOCK_TIME_OFFSET     (2000)
-#define d_FORCE_THRESHOLD_DIGITS    (75)
+#define d_FORCE_THRESHOLD_DIGITS    (70)
 #define d_MAX_NUM_MEASUREMENTS      (10)
 
 
