@@ -20,12 +20,12 @@
 #define d_SHOCKPAD_EN_CH4      (10)
 
 #define d_FORCE_SENSE_CH1      (A0)
-#define d_FORCE_SENSE_CH2      (A1)
-#define d_FORCE_SENSE_CH3      (A2)
-#define d_FORCE_SENSE_CH4      (A3)
+#define d_FORCE_SENSE_CH2      (A0)
+#define d_FORCE_SENSE_CH3      (A0)
+#define d_FORCE_SENSE_CH4      (A0)
 
 #define d_LED_DATA_CH1         (6)
-#define d_LED_DATA_CH2         (1)
+#define d_LED_DATA_CH2         (4)
 #define d_LED_DATA_CH3         (2)
 #define d_LED_DATA_CH4         (3)
 
