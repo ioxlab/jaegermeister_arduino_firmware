@@ -8,7 +8,7 @@
 #define FOG_TIME                (1000)
 
 // Fog machine
-#define PIN_FOG 13
+#define PIN_FOG 8
 
 // Parser defines
 #define d_MAX_STRING_SIZE       (64)
