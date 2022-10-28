@@ -251,7 +251,6 @@ bool parse_set(char *data) {
     shock_level = _shock_level;
     for (int i = 0; i < 4; ++i) {
             shock_pads[i] = _shock_pads[i];
-            Serial.println (shock_pads[i]);
         }
 
     return true;
