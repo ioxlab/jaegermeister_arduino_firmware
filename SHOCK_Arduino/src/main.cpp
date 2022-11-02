@@ -47,7 +47,8 @@
 #define d_SHOCK_TIME_LEVEL4_MS (1)
 
 #define d_SHOCK_TIME_OFFSET     (2000)
-#define d_FORCE_THRESHOLD_DIGITS    (70)
+#define d_FORCE_THRESHOLD_DIGITS    (190)
+#define d_FORCE_TIMEOUT_MS      (5000)
 #define d_MAX_NUM_MEASUREMENTS      (10)
 
 
@@ -266,7 +267,7 @@ void Func_ShockPads(void)
     // Check if the sensors are being pressed correctly
     Func_MeasureSensorBeforeShock ();
     // calculate a random number between 3000 and 10.000
-    lu16_TimerValue= 1000*random(d_LOWER_TIMER_LIMIT, d_UPPER_TIMER_LIMIT);
+    lu16_TimerValue= 500*random(d_LOWER_TIMER_LIMIT, d_UPPER_TIMER_LIMIT);
     // calculate shock timestamp
     lul_ShockTimestamp = millis() + lu16_TimerValue;
     // loop while actual and normal time are different
@@ -299,8 +300,15 @@ void Func_ShockPads(void)
                                         break;
                                 }
                             FastLED.show();
+                            FastLED.clear ();
+                        }
+                    else
+                        {
+                            FastLED.clear ();
+                            FastLED.show();
                         }
                 }
+
             FastLED.clear ();
             FastLED.show();
             // get current timestamp
@@ -484,37 +492,39 @@ void Func_Trigger()
 
 void Func_MeasureSensorBeforeShock(void)
 {
+    unsigned long lul_Timestamp = 0;
+    lul_Timestamp = millis() + d_FORCE_TIMEOUT_MS;
     // Measure if the corresponding sensors are being pressed
     for(uint8_t lu8_PadIndex = 0; lu8_PadIndex < d_NUM_SHOCKPADS; lu8_PadIndex++)
         {
-            if (SHOCK == shock_pads[lu8_PadIndex])
+            if ((SHOCK == shock_pads[lu8_PadIndex]) ) // && (millis() < lul_Timestamp)
                 {
                     switch (lu8_PadIndex)
                         {
-
                             case 0:
-                                while (d_FORCE_THRESHOLD_DIGITS < analogRead(d_FORCE_SENSE_CH1))
+
+                                while (d_FORCE_THRESHOLD_DIGITS > analogRead(d_FORCE_SENSE_CH1))
                                 {
                                     delayMicroseconds (1);
                                 }
-                                break;
+                            break;
 
                             case 1:
-                                while (d_FORCE_THRESHOLD_DIGITS < analogRead(d_FORCE_SENSE_CH2))
+                                while (d_FORCE_THRESHOLD_DIGITS > analogRead(d_FORCE_SENSE_CH2))
                                 {
                                     delayMicroseconds (1);
                                 }
-                                break;
+                            break;
 
                             case 2:
-                                while (d_FORCE_THRESHOLD_DIGITS < analogRead(d_FORCE_SENSE_CH3))
+                                while (d_FORCE_THRESHOLD_DIGITS > analogRead(d_FORCE_SENSE_CH3))
                                 {
                                     delayMicroseconds (1);
                                 }
-                                break;
+                            break;
 
                             case 3:
-                                while (d_FORCE_THRESHOLD_DIGITS < analogRead(d_FORCE_SENSE_CH4))
+                                while (d_FORCE_THRESHOLD_DIGITS > analogRead(d_FORCE_SENSE_CH4))
                                 {
                                     delayMicroseconds (1);
                                 }
@@ -540,7 +550,7 @@ void Func_MeasureSensorAfterShock(uint8_t *au8p_SensorArray)
                                 lu8_LoopCounter = 0;
                                 while ((lu8_LoopCounter <= d_MAX_NUM_MEASUREMENTS))
                                 {
-                                    if(analogRead (d_FORCE_SENSE_CH1) < d_FORCE_THRESHOLD_DIGITS)
+                                    if(analogRead (d_FORCE_SENSE_CH1) > d_FORCE_THRESHOLD_DIGITS)
                                     {
                                             lu8a_SensorArray[0] = SHOCK;
                                     }
@@ -556,7 +566,7 @@ void Func_MeasureSensorAfterShock(uint8_t *au8p_SensorArray)
                                 lu8_LoopCounter = 0;
                                 while ((lu8_LoopCounter <= d_MAX_NUM_MEASUREMENTS))
                                 {
-                                    if(analogRead (d_FORCE_SENSE_CH2) < d_FORCE_THRESHOLD_DIGITS)
+                                    if(analogRead (d_FORCE_SENSE_CH2) > d_FORCE_THRESHOLD_DIGITS)
                                         {
                                             lu8a_SensorArray[1] = SHOCK;
                                         }
@@ -572,7 +582,7 @@ void Func_MeasureSensorAfterShock(uint8_t *au8p_SensorArray)
                                 lu8_LoopCounter = 0;
                                 while ((lu8_LoopCounter <= d_MAX_NUM_MEASUREMENTS))
                                 {
-                                    if(analogRead (d_FORCE_SENSE_CH3) < d_FORCE_THRESHOLD_DIGITS)
+                                    if(analogRead (d_FORCE_SENSE_CH3) > d_FORCE_THRESHOLD_DIGITS)
                                         {
                                             lu8a_SensorArray[2] = SHOCK;
                                         }
@@ -588,7 +598,7 @@ void Func_MeasureSensorAfterShock(uint8_t *au8p_SensorArray)
                                 lu8_LoopCounter = 0;
                                 while ((lu8_LoopCounter <= d_MAX_NUM_MEASUREMENTS))
                                 {
-                                    if(analogRead (d_FORCE_SENSE_CH4) < d_FORCE_THRESHOLD_DIGITS)
+                                    if(analogRead (d_FORCE_SENSE_CH4) > d_FORCE_THRESHOLD_DIGITS)
                                     {
                                         lu8a_SensorArray[3] = SHOCK;
                                     }
