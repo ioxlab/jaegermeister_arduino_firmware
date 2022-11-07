@@ -154,7 +154,7 @@ void loop() {
             for (int i = 0; i < NUM_STRIPS; i++) {
                 switch (led_strip_patterns[i]) {
                     case JAEGERMEISTER_ORANGE:
-                        fill_strip_solid(i, CRGB::Orange);
+                        fill_strip_solid(i, CRGB::DarkOrange);
                         break;
                     case JAEGERMEISTER_GRUEN:
                         fill_strip_solid(i, CRGB::Green);
